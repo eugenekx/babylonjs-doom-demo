@@ -35,6 +35,8 @@ export class MachineGun {
     }
 
     shoot() {
+        if (this.ammo <= 0) return;
+
         this.shootInterval = setInterval(() => {
             // shoot one bullet
             this.shootOnce();
