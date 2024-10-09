@@ -73,6 +73,10 @@ export class MachineGun {
         this.currentFrame = 0;
         this.updateGunSprite();
         this.animationInterval = setInterval(() => {
+            if (this.ammo <= 0) {
+                this.stopShooting();
+            }
+            
             this.currentFrame++;
             if (this.currentFrame >= this.totalFrames * this.framesHold) {
                 // re-start the loop from the first frame related to the gun firing animation
