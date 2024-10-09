@@ -29,9 +29,16 @@ export class Player {
             switch (kbInfo.type) {
                 case BABYLON.KeyboardEventTypes.KEYDOWN:
                     if (kbInfo.event.key === " ") {
+                        if (kbInfo.event.repeat) { return }  // avoid repeated keystrokes
+
                         this.shoot();
                     } else if (kbInfo.event.key === "q") {
                         this.switchWeapon();
+                    }
+                    break;
+                case BABYLON.KeyboardEventTypes.KEYUP:
+                    if (kbInfo.event.key === " ") {
+                        this.stopShooting(); // For auto firearms: stop firing on spacebar release
                     }
                     break;
             }
@@ -42,6 +49,13 @@ export class Player {
         this.scene.onPointerObservable.add((pointerInfo) => {
             if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0) {
                 this.shoot();
+            }
+        });
+
+        // For auto firearms: stop firing on mouse button release
+        this.scene.onPointerObservable.add((pointerInfo) => {
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERUP && pointerInfo.event.button === 0) {
+                this.stopShooting();
             }
         });
 
@@ -73,7 +87,17 @@ export class Player {
         this.weapons[this.currentWeaponIndex].shoot(start, forward);
     }
 
+    stopShooting() {
+        const currentWeapon = this.weapons[this.currentWeaponIndex];
+        if (currentWeapon.isAutoFireWeapon) {
+            currentWeapon.stopShooting();
+        }
+    }
+
     switchWeapon() {
+        // Auto firearms stop shooting on weapon switch
+        this.stopShooting();
+
         this.currentWeaponIndex = (this.currentWeaponIndex + 1) % this.weapons.length;
         console.log(`Switched to ${this.weapons[this.currentWeaponIndex].constructor.name}`);
         this.updateWeaponVisibility();
