@@ -33,58 +33,67 @@ export class MachineGun {
         this.machineGunImage.cellHeight = 310;
         this.advancedTexture.addControl(this.machineGunImage);
     }
-
+    
     shoot() {
         if (this.ammo <= 0) return;
 
-        this.shootInterval = setInterval(() => {
-            // shoot one bullet
-            this.shootOnce();
-        }, this.fireRate);  // 60 FPS
+        this.shootOnceAnimationFrame = requestAnimationFrame((timestamp) => this.shootOnce(timestamp));
 
-        this.animateGun();
-    }
-    
-    shootOnce() {
-        if (this.ammo <= 0) return;
-
-        const startPosition = this.camera.position.clone();
-
-        // this vector will be added to the direction of the camera view to randomly spread the bullets
-        // within the circle shape. Radius is defined by the "spread" parameter
-        const spreadVector = new BABYLON.Polar(Math.random() * this.spread, Math.random() * Math.PI * 2).toVector2();
-
-        const direction = this.camera.getDirection(
-            new BABYLON.Vector3(spreadVector.x, spreadVector.y, 1)
-        );
-
-        //console.log('Machine Gun fired!');
-
-        this.ammo--;
-
-        startPosition
-            .addInPlace(direction.scale(1.0))
-            .addInPlace(new BABYLON.Vector3(0, -0.15, 0));
-        new Bullet(this.scene, startPosition, direction);
-    }
-
-    animateGun() {
         this.isAnimating = true;
         this.currentFrame = 0;
         this.updateGunSprite();
-        this.animationInterval = setInterval(() => {
-            if (this.ammo <= 0) {
-                this.stopShooting();
-            }
-            
-            this.currentFrame++;
-            if (this.currentFrame >= this.totalFrames * this.framesHold) {
-                // re-start the loop from the first frame related to the gun firing animation
-                // (skip the idle frame)
-                this.currentFrame = this.framesHold;    
-            }
-            this.updateGunSprite();
-        }, 1000 / 60); // 60 FPS
+        this.animateGunAnimationFrame = requestAnimationFrame((timestamp) => this.animateGun(timestamp));
+    }
+
+    shootOnce(timestamp) {
+        if (this.ammo <= 0) return;
+
+        
+        if (this.lastShootTimestamp === undefined) {
+            this.lastShootTimestamp = timestamp;
+        }
+        const elapsed = timestamp - this.lastShootTimestamp;
+
+        if (elapsed >= this.fireRate) {
+            this.lastShootTimestamp = timestamp;
+
+            const startPosition = this.camera.position.clone();
+
+            // this vector will be added to the direction of the camera view to randomly spread the bullets
+            // within the circle shape. Radius is defined by the "spread" parameter
+            const spreadVector = new BABYLON.Polar(Math.random() * this.spread, Math.random() * Math.PI * 2).toVector2();
+
+            const direction = this.camera.getDirection(
+                new BABYLON.Vector3(spreadVector.x, spreadVector.y, 1)
+            );
+
+            //console.log('Machine Gun fired!');
+
+            this.ammo--;
+
+            startPosition
+                .addInPlace(direction.scale(1.0))
+                .addInPlace(new BABYLON.Vector3(0, -0.15, 0));
+            new Bullet(this.scene, startPosition, direction);
+        }
+
+        this.shootOnceAnimationFrame = requestAnimationFrame((timestamp) => this.shootOnce(timestamp));
+    }
+
+    animateGun() {
+        if (this.ammo <= 0) {
+            this.stopShooting();
+        }
+        
+        this.currentFrame++;
+        if (this.currentFrame >= this.totalFrames * this.framesHold) {
+            // re-start the loop from the first frame related to the gun firing animation
+            // (skip the idle frame)
+            this.currentFrame = this.framesHold;    
+        }
+        this.updateGunSprite();
+        
+        this.animateGunAnimationFrame = requestAnimationFrame((timestamp) => this.animateGun(timestamp));
     }
 
     updateGunSprite() {
@@ -96,8 +105,8 @@ export class MachineGun {
         this.isAnimating = false;
         this.currentFrame = 0;
 
-        clearInterval(this.animationInterval);
-        clearInterval(this.shootInterval);
+        cancelAnimationFrame(this.shootOnceAnimationFrame);
+        cancelAnimationFrame(this.animateGunAnimationFrame);
         this.updateGunSprite();
     }
 
